@@ -1,4 +1,4 @@
-import requests as r
+import requests as req
 import pandas as pd
 
 pd.set_option('display.max_rows', 10)
@@ -16,10 +16,13 @@ def Download_Pairs_Historical_Data(InPair, url, OutPair = 'USD'):
         "allData": True
     }
     
-    response = r.post(url, json=payload).json()
-    FirstDF = pd.DataFrame.from_dict(response)
-    SecondDF = pd.DataFrame(FirstDF['Data'][3])
-    return(SecondDF)
+    response = req.post(url, json=payload).json()
+    if response['Response'] == 'Error':
+        return 'Error'
+    else:
+        FirstDF = pd.DataFrame.from_dict(response)
+        SecondDF = pd.DataFrame(FirstDF['Data'][3])
+        return(SecondDF)
 
 def Download_Available_Pairs(url, ApiKey, Exchange = 'Binance'):
     payload = {
@@ -27,10 +30,21 @@ def Download_Available_Pairs(url, ApiKey, Exchange = 'Binance'):
         "api_key": ApiKey
     }
     
-    response = r.post(url, json=payload).json()
+    response = req.post(url, json=payload).json()
     FirstDF = pd.DataFrame.from_dict(response)
     SecondDF = pd.DataFrame(FirstDF['Data'][0])
     return(SecondDF)
 
 AvailablePairs = Download_Available_Pairs(urlPairs, ApiKey)
-FilteredPair = AvailablePairs[AvailablePairs['tsym'] == 'BTC']['fsym'].tolist()
+FilteredPair = AvailablePairs[AvailablePairs['tsym'] == 'USDT']['fsym'].tolist()
+
+HistDataList = {}
+
+for i in FilteredPair:
+    Download = Download_Pairs_Historical_Data(i, urlHistData)
+    if isinstance(Download, pd.DataFrame):
+        HistDataList[i] = Download
+        HistDataList[i].to_csv('Data/' + i + '.csv', index=False)
+    else:
+        print(i)
+        continue
