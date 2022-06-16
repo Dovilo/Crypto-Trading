@@ -9,11 +9,11 @@ urlPairs = "https://min-api.cryptocompare.com/data/v2/pair/mapping/exchange"
 
 ApiKey = "c3002d0ec8ad7dbb7ab359e3530d32fc2b09e7b94f568f55c7080daf84bdbe2d"
 
-def Download_Pairs_Historical_Data(InPair, url, OutPair = 'USD'):
+def Download_Pairs_Historical_Data(InPair, url, OutPair = 'USD', allData = True):
     payload = {
         "fsym": InPair,
         "tsym": OutPair,
-        "allData": True
+        "allData": allData
     }
     
     response = req.post(url, json=payload).json()
@@ -43,8 +43,11 @@ HistDataList = {}
 for i in FilteredPair:
     Download = Download_Pairs_Historical_Data(i, urlHistData)
     if isinstance(Download, pd.DataFrame):
-        HistDataList[i] = Download
-        HistDataList[i].to_csv('Data/' + i + '.csv', index=False)
+        Download['time'] = pd.to_datetime(Download['time'], unit='s')
+        HistDataList[i] = Download[Download['close'] != 0]
+        HistDataList[i].set_index('time', inplace = True)
+        HistDataList[i].to_csv('Data/' + i + '.csv')
     else:
         print(i)
         continue
+    
