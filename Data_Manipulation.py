@@ -1,4 +1,4 @@
-#exec(Data_Loading.py)
+#exec(open('Data_Loading.py').read())
 from datetime import datetime, timedelta
 import pandas as pd
 import os
@@ -21,3 +21,7 @@ for key in HistDataList.copy():
 for key in HistDataList.copy():
     if today - HistDataList.get(key).iloc[0].name < timedelta(days = 365):
         HistDataList.pop(key)
+
+#Drop conversion data
+for key in HistDataList.copy():
+    HistDataList.get(key).drop(columns=['conversionType', 'conversionSymbol'], inplace=True)
