@@ -1,8 +1,15 @@
-import Data_Loading.py
 #exec(Data_Loading.py)
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, timedelta
+import pandas as pd
+import os
+
 
 today = datetime.now()
+HistDataList = {}
+FilteredPair = pd.read_csv('Data/_Pairs.csv', header=None).values.tolist()
+
+for i in range(len(os.listdir('Data'))):
+    HistDataList[os.listdir('Data')[i].split('.')[0]] = pd.read_csv('Data/' + os.listdir('Data')[i])
 
 for key in HistDataList.copy():
     if HistDataList.get(key).iloc[-1]['volumeto'] < 1000000:
@@ -13,3 +20,4 @@ datetime.timestamp(today)
 for key in HistDataList.copy():
     if today - HistDataList.get(key).iloc[0].name < timedelta(days = 365):
         HistDataList.pop(key)
+        

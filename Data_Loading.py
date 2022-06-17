@@ -37,6 +37,7 @@ def Download_Available_Pairs(url, ApiKey, Exchange = 'Binance'):
 
 AvailablePairs = Download_Available_Pairs(urlPairs, ApiKey)
 FilteredPair = AvailablePairs[AvailablePairs['tsym'] == 'USDT']['fsym'].tolist()
+pd.DataFrame(FilteredPair).to_csv('Additional Data/_Pairs.csv', header=False, index=False)
 
 HistDataList = {}
 
