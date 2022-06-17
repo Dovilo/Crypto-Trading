@@ -10,7 +10,7 @@ today = datetime.now()
 HistDataList = {}
 FilteredPair = pd.read_csv('Additional Data/_Pairs.csv', header=None).values.tolist()
 for i in range(len(os.listdir('Data'))):
-    HistDataList[os.listdir('Data')[i].split('.')[0]] = pd.read_csv('Data/' + os.listdir('Data')[i])
+    HistDataList[os.listdir('Data')[i].split('.')[0]] = pd.read_csv('Data/' + os.listdir('Data')[i], index_col='time', parse_dates=True)
 
 #Remove crypto with small present volume
 for key in HistDataList.copy():
