@@ -10,10 +10,15 @@ from statsmodels.regression.linear_model import GLS
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.metrics import r2_score
 
-Coin = 'AAVE'
+pd.set_option('display.max_rows', 10)
+pd.set_option('display.max_columns', 100)
 
-for i in range(1,8):
-    HistDataList[Coin]['close_lag' + str(i)] = HistDataList[Coin]['close'].shift(i)
+Coin = 'BTC'
+
+def Add_Lagged_CHL(Dict, coin, columns, lag):
+    for key in columns:
+        for i in range(1,lag):
+            Dict[coin][key + '_lag' + str(i)] = Dict[coin][key].shift(i)
 
 for i in [6,12,18,24]:
     HistDataList[Coin]['ma_' + str(i)] = ta.SMA(HistDataList[Coin]['close'].values,
@@ -62,4 +67,4 @@ plt.plot(range(0,len(Y_test)),error)
 acf = smt.graphics.plot_acf(lm_1.resid, lags=40 , alpha=0.05)
 acf.show()
 
-
+Add_Lagged_CHL(HistDataList, 'BTC', ['close', 'high', 'low'], 8)

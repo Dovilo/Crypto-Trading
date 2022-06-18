@@ -3,7 +3,9 @@ from datetime import datetime, timedelta
 import pandas as pd
 import os
 
-today = datetime.now()
+#Set last analysis date
+today = '2022-06-17'
+today = datetime.strptime(today, '%Y-%m-%d')
 
 #Recreate data downloaded in the Data_Loading.py.
 #If no data available or stale, exec that file first
