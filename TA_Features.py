@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import statsmodels as sm
 import statsmodels.tsa.api as smt
+import numpy as np
 from sklearn.model_selection import train_test_split
 from statsmodels.regression.linear_model import GLS
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -16,23 +17,43 @@ pd.set_option('display.max_columns', 100)
 Coin = 'BTC'
 
 def Add_Lagged_CHL(Dict, coin, columns, lag):
+    #Add lagged values to the data
     for key in columns:
         for i in range(1,lag):
             Dict[coin][key + '_lag' + str(i)] = Dict[coin][key].shift(i)
 
-for i in [6,12,18,24]:
-    HistDataList[Coin]['ma_' + str(i)] = ta.SMA(HistDataList[Coin]['close'].values,
-                                                 timeperiod=i) / HistDataList[Coin]['close']
-    
-    HistDataList[Coin]['rsi_' + str(i)] = ta.RSI(HistDataList[Coin]['close'].values,
+def Add_MA(Dict, coin, column, MA, periods):
+    #Add MA to the data
+    for i in periods:
+        if MA == 'SMA':
+            Dict[Coin]['SMA_' + str(i)] = ta.SMA(Dict[Coin][column].values,
+                                                 timeperiod=i)
+        elif MA == 'EMA':
+            Dict[Coin]['EMA_' + str(i)] = ta.EMA(Dict[Coin][column].values,
+                                                 timeperiod=i)
+        elif MA == 'CMA':
+            Dict[Coin]['CMA_' + str(i)] = ta.CMA(Dict[Coin][column].values,
+                                                 timeperiod=i)
+        elif MA == 'WMA':
+            Dict[Coin]['WMA_' + str(i)] = ta.WMA(Dict[Coin][column].values,
+                                                 timeperiod=i)
+        else: raise ValueError('Incorrect Moving Average provided')
+
+def Add_RSI(Dict, coin, column, periods):
+    for i in periods:
+        Dict[Coin]['RSI_' + str(i)] = ta.RSI(Dict[Coin][column].values,
                                                  timeperiod=i)
 
-HistDataList.get(Coin).drop(columns=['high', 'low', 'open', 'volumefrom'], inplace=True)
-HistDataList[Coin].dropna(inplace=True)
+def Delete_Unnecessary_Columns_And_Drop_NA(Dict, coin, columns):
+    Dict.get(coin).drop(columns=columns, inplace=True)
+    Dict[coin].dropna(inplace=True)
 
-normalized = HistDataList[Coin].loc[:, HistDataList[Coin].columns != 'close']
-normalized = (normalized - normalized.mean()) / normalized.std()
-normalized = pd.concat((normalized, HistDataList[Coin].loc[:,'close']), axis=1)
+def Normalize_Data(Dict, coin, columns):
+    normalized = Dict[coin][columns]
+    rest = Dict[coin].drop(columns, axis=1)
+    normalized = (normalized - normalized.mean()) / normalized.std()
+    normalized = pd.concat((normalized, rest), axis=1)
+    return normalized
 
 X = normalized.loc[:, normalized.columns != 'close']
 Y = normalized['close']
@@ -68,3 +89,7 @@ acf = smt.graphics.plot_acf(lm_1.resid, lags=40 , alpha=0.05)
 acf.show()
 
 Add_Lagged_CHL(HistDataList, 'BTC', ['close', 'high', 'low'], 8)
+Add_MA(HistDataList, 'BTC', 'close', 'SMA', [6, 12, 18, 24])
+Add_RSI(HistDataList, 'BTC', 'close', [6, 12, 18, 24])
+Delete_Unnecessary_Columns_And_Drop_NA(HistDataList, 'BTC', ['volumefrom', 'high', 'low', 'open'])
+Normalize_Data(HistDataList, 'BTC', HistDataList['BTC'].columns[HistDataList['BTC'].columns != 'close'])
