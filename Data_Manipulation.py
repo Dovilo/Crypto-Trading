@@ -23,6 +23,11 @@ for key in HistDataList.copy():
 for key in HistDataList.copy():
     if today - HistDataList.get(key).iloc[0].name < timedelta(days = 365):
         HistDataList.pop(key)
+        
+#Remove old data
+for key in HistDataList.copy():
+    if today - HistDataList.get(key).iloc[0].name > timedelta(days = 5*365):
+        HistDataList[key] = HistDataList.get(key)[HistDataList.get(key).index > HistDataList.get(key).loc[today - timedelta(days = 5*365)].name]
 
 #Drop conversion data
 for key in HistDataList.copy():
