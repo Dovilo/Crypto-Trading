@@ -3,10 +3,10 @@ exec(open('Data_Manipulation.py').read())
 import talib as ta
 import pandas as pd
 import statsmodels as sm
-from sklearn.model_selection import train_test_split
 from statsmodels.regression.linear_model import GLS
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.metrics import r2_score, max_error, mean_absolute_percentage_error
+import numpy as np 
 
 pd.set_option('display.max_rows', 10)
 pd.set_option('display.max_columns', 100)
@@ -61,7 +61,7 @@ def Normalize_Data(DF, columns):
     return normalized
 
 def Train_Linear_Model(X_train, Y_train, VIF_Limit, p):
-    for i in range(X.shape[1]-1):
+    for i in range(X_train.shape[1]-1):
         lm_1 = GLS(Y_train, X_train).fit()
         
         #Delete variables with high VIF or p
@@ -96,9 +96,11 @@ Dict_Clean = Delete_Unnecessary_Columns_And_Drop_NA(Coin_Data, ['volumefrom', 'v
 normalized = Dict_Clean
 
 #Split the data
-X = normalized.loc[:, normalized.columns != 'close']
-Y = normalized['close']
-X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size=0.2)
+train_set, test_set= np.split(normalized, [int(0.8 *len(normalized))])
+X_train = train_set.loc[:, train_set.columns != 'close']
+Y_train = train_set['close']
+X_test = test_set.loc[:, test_set.columns != 'close']
+Y_test = test_set['close']
 X_train = sm.tools.tools.add_constant(X_train, has_constant='add')
 X_test = sm.tools.tools.add_constant(X_test, has_constant='add')
 
