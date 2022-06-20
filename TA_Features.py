@@ -1,63 +1,53 @@
 HistDataList = {}
 exec(open('Data_Manipulation.py').read())
 import talib as ta
-import matplotlib.pyplot as plt
 import pandas as pd
 import statsmodels as sm
-import statsmodels.tsa.api as smt
 from sklearn.model_selection import train_test_split
 from statsmodels.regression.linear_model import GLS
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, max_error, mean_absolute_percentage_error
 
 pd.set_option('display.max_rows', 10)
 pd.set_option('display.max_columns', 100)
 
-#Specify coin for the analysis
-Coin = 'BTC'
-
-def Add_Lagged_CHL(Dict, coin, columns, lag):
+def Add_Lagged_CHL(DF, columns, lag):
     #Add lagged values to the data
     for key in columns:
         for i in range(1,lag):
-            Dict[coin][key + '_lag' + str(i)] = Dict[coin][key].shift(i)
+            DF[key + '_lag' + str(i)] = DF[key].shift(i)
 
-def Add_MA(Dict, coin, column, MA, periods):
+def Add_MA(DF, column, MA, periods):
     #Add MA to the data
     for i in periods:
         if MA == 'SMA':
-            Dict[Coin]['SMA_' + str(i)] = ta.SMA(Dict[Coin][column].values,
-                                                 timeperiod=i)
+            DF['SMA_' + str(i)] = ta.SMA(DF[column].values, timeperiod=i)
         elif MA == 'EMA':
-            Dict[Coin]['EMA_' + str(i)] = ta.EMA(Dict[Coin][column].values,
-                                                 timeperiod=i)
+            DF['EMA_' + str(i)] = ta.EMA(DF[column].values, timeperiod=i)
         elif MA == 'CMA':
-            Dict[Coin]['CMA_' + str(i)] = ta.CMA(Dict[Coin][column].values,
-                                                 timeperiod=i)
+            DF['CMA_' + str(i)] = ta.CMA(DF[column].values, timeperiod=i)
         elif MA == 'WMA':
-            Dict[Coin]['WMA_' + str(i)] = ta.WMA(Dict[Coin][column].values,
-                                                 timeperiod=i)
+            DF['WMA_' + str(i)] = ta.WMA(DF[column].values, timeperiod=i)
         else: raise ValueError('Incorrect Moving Average provided')
 
-def Add_RSI(Dict, coin, column, periods):
+def Add_RSI(DF, column, periods):
     #Adds RSI indicator
     for i in periods:
-        Dict[Coin]['RSI_' + str(i)] = ta.RSI(Dict[Coin][column].values,
-                                                 timeperiod=i)
+        DF['RSI_' + str(i)] = ta.RSI(DF[column].values, timeperiod=i)
 
-def Delete_Unnecessary_Columns_And_Drop_NA(Dict, coin, columns):
+def Delete_Unnecessary_Columns_And_Drop_NA(DF, columns):
     #Drops specified columns and drops rows with NAs
     
-    Cleaned = Dict
-    if(any(x in Dict[coin].columns for x in columns)):
-        Dict.get(coin).drop(columns=columns, inplace=True)
-    Cleaned[coin].dropna(inplace=True)
+    Cleaned = DF
+    if(any(x in DF.columns for x in columns)):
+        DF.drop(columns=columns, inplace=True)
+    DF.dropna(inplace=True)
     return(Cleaned)
 
-def Normalize_Data(Dict, coin, columns):
+def Normalize_Data(DF, columns):
     #Normalizes the data by substracting the mean and dividing by the standard deviation
-    normalized = Dict[coin][columns]
-    rest = Dict[coin].drop(columns, axis=1)
+    normalized = DF[columns]
+    rest = DF.drop(columns, axis=1)
     normalized = (normalized - normalized.mean()) / normalized.std()
     normalized = pd.concat((normalized, rest), axis=1)
     return normalized
@@ -78,20 +68,34 @@ def Train_Linear_Model(X_train, Y_train, VIF_Limit, p):
         else: break
     return lm_1
 
-Add_Lagged_CHL(HistDataList, Coin, ['close', 'high', 'low'], 8)
-Add_MA(HistDataList, Coin, 'close', 'SMA', [6, 12, 18, 24])
-Add_RSI(HistDataList, Coin, 'close', [6, 12, 18, 24])
+#Specify coin for the analysis
+Coin = 'BTC'
 
-Dict_Clean = Delete_Unnecessary_Columns_And_Drop_NA(HistDataList, Coin, ['volumefrom', 'high', 'low', 'open'])
-normalized = Normalize_Data(Dict_Clean, Coin, Dict_Clean[Coin].columns[Dict_Clean[Coin].columns != 'close'])
+#Copy data
+Coin_Data = HistDataList[Coin]
+
+#Add TA
+Add_Lagged_CHL(Coin_Data, ['close', 'high', 'low', 'volumeto'], 8)
+Add_MA(Coin_Data, 'close', 'SMA', [6, 12, 18, 24])
+Add_RSI(Coin_Data, 'close', [6, 12, 18, 24])
+
+#Clean and normalize the data
+Dict_Clean = Delete_Unnecessary_Columns_And_Drop_NA(Coin_Data, ['volumefrom', 'volumeto', 'high', 'low', 'open'])
+normalized = Normalize_Data(Dict_Clean, Dict_Clean.columns[Dict_Clean.columns != 'close'])
+
+#Split the data
 X = normalized.loc[:, normalized.columns != 'close']
 Y = normalized['close']
 X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size=0.2)
 X_train = sm.tools.tools.add_constant(X_train, has_constant='add')
 X_test = sm.tools.tools.add_constant(X_test, has_constant='add')
 
+#Create models
 CoinLinearModel = Train_Linear_Model(X_train, Y_train, 10, 0.05)
 CoinLinearModel.summary()
+
+#Evaluate models
 Y_test_p = CoinLinearModel.predict(X_test[X_train.columns])
 r2_score(Y_test, Y_test_p)
-error = Y_test - Y_test_p
+max_error(Y_test, Y_test_p)
+mean_absolute_percentage_error(Y_test, Y_test_p)
