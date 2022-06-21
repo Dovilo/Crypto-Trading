@@ -6,7 +6,8 @@ import statsmodels as sm
 from statsmodels.regression.linear_model import GLS
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.metrics import r2_score, max_error, mean_absolute_percentage_error
-import numpy as np 
+import numpy as np
+from datetime import timedelta
 
 pd.set_option('display.max_rows', 10)
 pd.set_option('display.max_columns', 100)
@@ -17,7 +18,7 @@ def Add_Lagged_CHL(DF, columns, lag):
         for i in range(1,lag):
             DF[key + '_lag' + str(i)] = DF[key].shift(i)
 
-def Add_MA(DF, column, MA, periods):
+def Add_MA(DF, column, MA, periods=None):
     #Add MA to the data
     for i in periods:
         if MA == 'SMA':
@@ -43,6 +44,12 @@ def Add_RSI(DF, column, periods):
     for i in periods:
         DF['RSI_' + str(i)] = ta.RSI(DF[column].values, timeperiod=i)
 
+def Add_Normalized_Volatility(DF, column, time):
+    DF['Std_Normalized'] = ''
+    for i in range(DF.shape[0]):
+        mask = np.logical_and(DF.index > DF.index[i] - timedelta(days = time), DF.index <= DF.index[i])
+        DF['Std_Normalized'][i] = DF[column][mask].std() / DF[column][mask].mean()
+
 def Delete_Unnecessary_Columns_And_Drop_NA(DF, columns):
     #Drops specified columns and drops rows with NAs
     
@@ -66,11 +73,11 @@ def Train_Linear_Model(X_train, Y_train, VIF_Limit, p):
         
         #Delete variables with high VIF or p
         vif = pd.DataFrame()
-        vif["VIF Factor"] = [variance_inflation_factor(X_train, i) for i in range(X_train.shape[1])]
-        vif["features"] = X_train.columns
+        vif['VIF Factor'] = [variance_inflation_factor(X_train, i) for i in range(X_train.shape[1])]
+        vif['Features'] = X_train.columns
         vif.sort_values('VIF Factor', ascending=False, inplace=True, ignore_index=True)
         #Close_lag1 factor is always needed
-        if vif['VIF Factor'][0] > VIF_Limit and vif["features"][0] != 'close_lag1':
+        if vif['VIF Factor'][0] > VIF_Limit and vif['Features'][0] != 'close_lag1':
             del X_train[vif['features'][0]]
         elif vif['VIF Factor'][1] > VIF_Limit:
             del X_train[vif['features'][1]]
@@ -87,8 +94,9 @@ Coin_Data = HistDataList[Coin].copy()
 
 #Add TA
 Add_Lagged_CHL(Coin_Data, ['close', 'high', 'low', 'volumeto'], 8)
-Add_MA(Coin_Data, 'close', 'TEMA', [7, 14, 21, 35, 70])
+Add_MA(Coin_Data, 'close', 'EMA', [7, 14, 21, 35, 70])
 Add_RSI(Coin_Data, 'close', [7, 14, 21, 35, 70])
+Add_Normalized_Volatility(Coin_Data, 'close', 365)
 
 #Clean and normalize the data
 Dict_Clean = Delete_Unnecessary_Columns_And_Drop_NA(Coin_Data, ['volumefrom', 'volumeto', 'high', 'low', 'open'])
